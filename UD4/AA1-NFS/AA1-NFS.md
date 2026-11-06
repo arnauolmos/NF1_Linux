@@ -29,18 +29,61 @@ Abans de compartir res, hem de preparar els usuaris i els directoris al Servidor
 
 ## Fase 3: L'Exportació d'Administració (El Dilema del root_squash)
 
-El client necessita que el directori `/srv/nfs/admin_tools` sigui accessible per l'equip d'administradors. A vegades, l'usuari `root` del client (que sou vosaltres, els consultors) necessitarà escriure en aquest directori per instal·lar eines. Aquí mostrarem un error típic i la seva solució.
+El client necessita que el directori `/srv/nfs/admin_tools` sigui accessible per l'equip d'administradors. 
+
+A vegades, l'usuari `root` del client (que sou vosaltres, els consultors) necessitarà escriure en aquest directori per instal·lar eines.
+
+ Aquí mostrarem un error típic i la seva solució.
 
 ### Prova 1 (L'error comú)
 1. Exportar el directori `/srv/nfs/admin_tools` amb les opcions `rw,sync`.
-2. Des del client, muntar aquest recurs compartit a `/mnt/admin_tools`. Com a `root` del client, intentar crear un fitxer dins d'aquest directori muntat.
-3. Verificar quin és el propietari del fitxer creat. Per què? Justificar la resposta amb l'explicació tècnica de `root_squash`.
+````
+   arnau@sox-aodl:~$ sudo exportfs -ra
 
+   arnau@sox-aodl:~$ sudo exportfs -v
+````
+2. Des del client, muntar aquest recurs compartit a `/mnt/admin_tools`. Com a `root` del client, intentar crear un fitxer dins d'aquest directori muntat.
+
+```
+arnau@aarnau-zorin:~$ sudo mount -t nfs 10.0.2.6:/srv/nfs/admin_tools /mnt/admin_tools
+
+
+arnau@aarnau-zorin:~$ sudo touch /mnt/admin_tools/prova_root.txt
+touch: cannot touch '/mnt/admin_tools/prova_root.txt': Permission denied
+
+
+arnau@aarnau-zorin:~$ ls -l /mnt/admin_tools/
+total 0
+```
+3. Verificar quin és el propietari del fitxer creat. Per què? Justificar la resposta amb l'explicació tècnica de `root_squash`.
+````
+Encara que creïs el fitxer com a root al client, al servidor no apareixerà com a propietari root.
+
+Això passa perquè NFS utilitza per defecte l'opció root_squash, que transforma les peticions de l'usuari root del client en un usuari anònim (normalment nobody o nfsnobody).
+
+A més, com que aquest usuari anònim no té permisos sobre el directori, és possible que la creació del fitxer doni un error de permisos
+````
 ### Prova 2 (La Solució)
 1. Modificar l'exportació del directori `/srv/nfs/admin_tools` per incloure l'opció `no_root_squash`.
-2. Al client, desmuntar i tornar a muntar el recurs compartit.
-3. Com a `root` del client, intentar crear un fitxer dins d'aquest directori muntat. Observeu quin és el propietari del fitxer creat aquesta vegada. Ha canviat alguna cosa? Justificar la resposta amb l'explicació tècnica de `no_root_squash`.
 
+````
+/srv/nfs/admin_tools 10.0.2.9/8(rw,sync,no_root_squash)
+````
+2. Al client, desmuntar i tornar a muntar el recurs compartit.
+````
+arnau@aarnau-zorin:~$ sudo umount /mnt/admin_tools
+arnau@aarnau-zorin:~$ sudo mount -t nfs 10.0.2.6:/srv/nfs/admin_tools /mnt/admin_tools 
+````
+3. Com a `root` del client, intentar crear un fitxer dins d'aquest directori muntat. Observeu quin és el propietari del fitxer creat aquesta vegada. Ha canviat alguna cosa? Justificar la resposta amb l'explicació tècnica de `no_root_squash`.
+````
+arnau@aarnau-zorin:~$ sudo touch /mnt/admin_tools/prova_no_root_squash.txt
+arnau@aarnau-zorin:~$ ls -l /mnt/admin_tools/
+total 0
+-rw-r--r-- 1 root root 0 nov  6 22:56 prova_no_root_squash.txt
+
+Amb no_root_squash, el servidor no transforma l'usuari root del client en un usuari anònim. Per tant, les operacions realitzades com a root al client es mantenen com a operacions de root al servidor.
+
+````
 ---
 
 ## Fase 4: L'Exportació de Desenvolupament (Permisos rw vs ro)
