@@ -4,6 +4,8 @@ Per al client, utilitzarem Zorin OS 18 amb configuració de "xarxa NAT". El serv
 
 Ens assegurarem que ambdues màquines tinguin accés a Internet i que es puguin comunicar entre elles a través de la xarxa només-amb-amfitrió i actualitzarem els sistemes amb les últimes actualitzacions disponibles.
 
+
+
 ---
 
 ## Fase 2: Preparació del servidor
